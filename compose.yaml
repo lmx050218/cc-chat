@@ -1,0 +1,18 @@
+services:
+  cc-relay:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: dexbug/cc-chat:latest
+    container_name: cc-relay
+    restart: unless-stopped
+    ports:
+      - "${PORT:-17389}:${PORT:-17389}"
+    environment:
+      - CC_TOKEN=${CC_TOKEN}
+      - PORT=${PORT:-17389}
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:${PORT:-17389}/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
