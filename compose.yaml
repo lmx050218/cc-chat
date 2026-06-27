@@ -1,9 +1,6 @@
 services:
   cc-relay:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    image: dexbug/cc-chat:latest
+    image: dexbug/cc-chat:v1.0
     container_name: cc-relay
     restart: unless-stopped
     ports:

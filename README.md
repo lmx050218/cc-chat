@@ -16,22 +16,26 @@ openssl rand -hex 32
 
 ### 2. 部署 Relay（服务器）
 
-**Docker 一键部署：**
+```bash
+mkdir cc-chat && cd cc-chat
+```
+
+下载 `compose.yaml` 和 `.env`：
 
 ```bash
-git clone https://github.com/你的用户名/cc-chat.git
-cd cc-chat
+curl -O https://raw.githubusercontent.com/lmx050218/cc-chat/main/compose.yaml
 echo "CC_TOKEN=你的Token" > .env
-docker compose up -d --build
 ```
 
-**或手动部署：**
+启动：
 
 ```bash
-cd relay
-npm install
-CC_TOKEN=你的Token PORT=17389 node server.js
+docker compose up -d
 ```
+
+镜像 `dexbug/cc-chat:v1.0` 会自动从 Docker Hub 拉取，无需本地构建。
+
+> 如需本地构建，可 clone 仓库后执行 `docker compose up -d --build`。
 
 ### 3. 配置 Nginx 反代（可选，推荐）
 
@@ -43,7 +47,6 @@ server {
     ssl_certificate     /path/to/cert.pem;
     ssl_certificate_key /path/to/key.pem;
 
-    # WebSocket + 静态页面
     location / {
         proxy_pass http://127.0.0.1:17389;
         proxy_http_version 1.1;
@@ -59,7 +62,11 @@ server {
 }
 ```
 
+无域名时可直接用 `http://服务器IP:17389` 访问。
+
 ### 4. 启动 Agent（本机）
+
+Agent 运行在你的本地电脑上，负责启动 Claude Code CLI 并转发到 Relay。
 
 **Windows 双击 `start.cmd`** 或手动：
 
@@ -71,20 +78,20 @@ npm install
 ```powershell
 # PowerShell
 $env:CC_TOKEN = "你的Token"
-$env:CC_RELAY = "wss://cc.你的域名.com/ws"
+$env:CC_RELAY = "wss://你的域名/ws"   # 无域名用 ws://服务器IP:17389/ws
 node agent.js
 ```
 
 ```bash
 # Linux / macOS
-CC_TOKEN=你的Token CC_RELAY=wss://cc.你的域名.com/ws node agent.js
+CC_TOKEN=你的Token CC_RELAY=wss://你的域名/ws node agent.js
 ```
 
 Agent 会自动检测 VS Code 扩展目录中的 `claude` CLI。也可以通过 `CC_CMD` 环境变量指定路径。
 
 ### 5. 访问
 
-浏览器打开 `https://cc.你的域名.com`，输入 Token 即可使用。
+浏览器打开你的域名（或 `http://服务器IP:17389`），输入 Token 即可使用。
 
 ## 功能
 
@@ -103,15 +110,15 @@ Agent 会自动检测 VS Code 扩展目录中的 `claude` CLI。也可以通过 
 
 ```
 cc-chat/
-├── compose.yaml          # Docker Compose
-├── Dockerfile            # Docker 构建文件
+├── compose.yaml          # Docker Compose（直接拉取镜像部署）
+├── Dockerfile            # 本地构建用
 ├── .env.example          # 环境变量模板
 ├── start.cmd             # Windows 本机一键启动 Agent
 ├── relay/                # Relay 服务端
 │   ├── server.js         # WebSocket 中继 + 静态文件服务
 │   ├── package.json
 │   └── public/
-│       └── index.html    # Web 前端（xterm.js + 输入栏）
+│       └── index.html    # Web 前端
 └── agent/                # Agent 客户端（本机运行）
     ├── agent.js          # 多会话 PTY 管理器
     └── package.json
@@ -132,10 +139,10 @@ cc-chat/
 
 ```
 浏览器 (xterm.js)
-  ↕ WebSocket {type: 'data', sessionId, data}
-Relay 服务器 (消息中转)
-  ↕ WebSocket {type: 'data', sessionId, data}
-Agent (node-pty + xterm/headless)
+  ↕ WebSocket
+Relay 服务器 (消息中转，Docker)
+  ↕ WebSocket
+Agent (node-pty，本机运行)
   ↕ stdin/stdout
 Claude Code CLI
 ```
